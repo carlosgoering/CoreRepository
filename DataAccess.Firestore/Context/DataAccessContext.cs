@@ -1,8 +1,7 @@
 ﻿using DataAccess.Abstractions.Interfaces;
 using DataAccess.Abstractions.Models;
-using Microsoft.Extensions.Options;
+using DataAccess.Core.Metadata;
 using Google.Cloud.Firestore;
-using System.Linq.Expressions;
 
 namespace DataAcess.Firestore.Context;
 
@@ -11,7 +10,7 @@ namespace DataAcess.Firestore.Context;
 /// </summary>
 /// <typeparam name="TEntity"></typeparam>
 internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity>
-    where TEntity : class, IBaseEntity, new()
+    where TEntity : class, new()
 {
     private readonly FirestoreDb database;
     private readonly CollectionReference collection;
@@ -27,34 +26,29 @@ internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity>
 
     public async Task InsertAsync(TEntity entity)
     {
-        var document = collection.Document(entity.Id);
+        var pk = EntityMetadata.GetPrimaryKeyValue(entity)?.ToString();
+
+        var document = collection.Document(pk);
 
         await document.CreateAsync(entity);
     }
 
     public async Task UpdateAsync(TEntity entity)
     {
-        var document = collection.Document(entity.Id);
+        var pk = EntityMetadata.GetPrimaryKeyValue(entity)?.ToString();
+
+        var document = collection.Document(pk);
 
         await document.SetAsync(entity);
     }
 
     public async Task DeleteAsync(TEntity entity)
     {
-        var document = collection.Document(entity.Id);
+        var pk = EntityMetadata.GetPrimaryKeyValue(entity)?.ToString();
+
+        var document = collection.Document(pk);
 
         await document.DeleteAsync();
-    }
-
-    public async Task<TEntity?> SelectByIdAsync(string id)
-    {
-        var document = collection.Document(id);
-
-        var snapshot = await document.GetSnapshotAsync();
-
-        return snapshot.Exists
-            ? snapshot.ConvertTo<TEntity>()
-            : null;
     }
 
     public async Task<TEntity?> FirstOrDefaultAsync(
@@ -212,5 +206,6 @@ internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity>
             _ => throw new NotSupportedException(
                 $"Operator '{filter.Operator}' is not supported by Firestore.")
         };
+
     }
 }

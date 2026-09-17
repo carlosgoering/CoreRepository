@@ -4,7 +4,7 @@ using DataAccess.Abstractions.Models;
 namespace DataAccess.Core.Repository;
 
 public class DataRepository<TEntity> : IRepository<TEntity>
-    where TEntity : class, IBaseEntity, new()
+    where TEntity : class, new()
 {
     private readonly IDataAccessContext<TEntity> dataContext;
 
@@ -25,18 +25,8 @@ public class DataRepository<TEntity> : IRepository<TEntity>
         return entity;
     }
 
-    public async Task DeleteAsync(string id)
-    {
-        var entity = await dataContext.SelectByIdAsync(id);
-
-        if (entity is null)
-            return;
-
+    public async Task DeleteAsync(TEntity entity) =>
         await dataContext.DeleteAsync(entity);
-    }
-
-    public Task<TEntity?> SelectByIdAsync(string id)
-        => dataContext.SelectByIdAsync(id);
 
     public Task<TEntity?> FirstOrDefaultAsync(Query<TEntity> query)
         => dataContext.FirstOrDefaultAsync(query);

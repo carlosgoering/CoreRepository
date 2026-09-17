@@ -10,8 +10,8 @@ namespace DataAcess.Firestore.Configuration
     public static class Registration
     {
         public static IServiceCollection AddFirestore(
-       this IServiceCollection services,
-       Action<Database> configure)
+           this IServiceCollection services,
+           Action<Database> configure)
         {
             services.Configure(configure);
 

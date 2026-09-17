@@ -1,8 +1,6 @@
-using DataAccess.Abstractions.Models;
+using DataAccess.Core.Metadata;
 using Microsoft.Extensions.Logging;
 using SQLite;
-using System.Reflection;
-using PrimaryKeyDefinition = DataAccess.Abstractions.Attributes.PrimaryKeyAttribute;
 
 namespace DataAccess.SQLite.ClassMap;
 
@@ -11,7 +9,7 @@ internal static class ClassMapRegistration
     public static async Task Register<TEntity>(
         SQLiteAsyncConnection database,
         ILogger logger)
-        where TEntity : class, IBaseEntity, new()
+        where TEntity : class, new()
     {
         var type = typeof(TEntity);
         var tableName = type.Name;
@@ -22,10 +20,7 @@ internal static class ClassMapRegistration
         logger.LogDebug(
             $"[SQLite] Database path: {database.DatabasePath}");
 
-        var primaryKey = type
-            .GetProperties()
-            .SingleOrDefault(x =>
-                x.GetCustomAttribute<PrimaryKeyDefinition>() != null);
+        var primaryKey = EntityMetadata.GetPrimaryKey<TEntity>();
 
         if (primaryKey is null)
         {

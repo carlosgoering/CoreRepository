@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAccess.SQLite", "DataAc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAccess.Firestore", "DataAccess.Firestore\DataAccess.Firestore.csproj", "{6D7757B3-9EA0-44EA-9091-66C7ABECB178}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Providers", "Providers", "{0A208420-60A1-44EA-A6DC-667D9D8D3ACF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -92,6 +94,11 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{ABBCD214-F9FD-4012-BA82-FAC38D8C9FCD} = {0A208420-60A1-44EA-A6DC-667D9D8D3ACF}
+		{D3AF6423-DD31-4F54-BDDC-3F98AEDBE480} = {0A208420-60A1-44EA-A6DC-667D9D8D3ACF}
+		{6D7757B3-9EA0-44EA-9091-66C7ABECB178} = {0A208420-60A1-44EA-A6DC-667D9D8D3ACF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2B926E2F-EC9E-4846-BB88-4761574CEC10}

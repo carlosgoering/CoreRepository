@@ -3,15 +3,13 @@
 namespace DataAccess.Abstractions.Interfaces;
 
 public interface IRepository<TEntity>
-    where TEntity : class, IBaseEntity
+    where TEntity : class
 {
     Task<TEntity> InsertAsync(TEntity entity);
 
     Task<TEntity> UpdateAsync(TEntity entity);
 
-    Task DeleteAsync(string id);
-
-    Task<TEntity?> SelectByIdAsync(string id);
+    Task DeleteAsync(TEntity entity);
 
     Task<TEntity?> FirstOrDefaultAsync(Query<TEntity> query);
 

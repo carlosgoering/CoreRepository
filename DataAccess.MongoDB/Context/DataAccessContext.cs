@@ -1,11 +1,10 @@
 ﻿using DataAccess.Abstractions.Interfaces;
 using DataAccess.Abstractions.Models;
+using DataAccess.Core.Metadata;
 using DataAccess.MongoDB.ClassMaps;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using System.Collections;
-using System.Linq.Expressions;
 
 namespace DataAccess.MongoDB.Context;
 
@@ -14,7 +13,7 @@ namespace DataAccess.MongoDB.Context;
 /// </summary>
 /// <typeparam name="TEntity"></typeparam>
 internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity>
-    where TEntity : class, IBaseEntity, new()
+    where TEntity : class, new()
 {
     private readonly IMongoCollection<TEntity> collection;
     public DataAccessContext(IMongoDatabase database)
@@ -33,22 +32,16 @@ internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity>
 
     public async Task UpdateAsync(TEntity entity)
     {
-        await collection.ReplaceOneAsync(
-            Builders<TEntity>.Filter.Eq(x => x.Id, entity.Id),
-            entity);
+        var filter = FilterByPrimaryKey(entity);
+
+        await collection.ReplaceOneAsync(filter, entity);
     }
 
     public async Task DeleteAsync(TEntity entity)
     {
-        await collection.DeleteOneAsync(
-            Builders<TEntity>.Filter.Eq(x => x.Id, entity.Id));
-    }
+        var filter = FilterByPrimaryKey(entity);
 
-    public async Task<TEntity?> SelectByIdAsync(string id)
-    {
-        return await collection
-            .Find(Builders<TEntity>.Filter.Eq(x => x.Id, id))
-            .FirstOrDefaultAsync();
+        await collection.DeleteOneAsync(filter);
     }
 
     public async Task<TEntity?> FirstOrDefaultAsync(
@@ -188,5 +181,19 @@ internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity>
         return builder.In(
             filter.Field,
             values.Cast<object>());
+    }
+
+
+    private static FilterDefinition<TEntity> FilterByPrimaryKey(TEntity entity)
+    {
+        var primaryKey = EntityMetadata.GetPrimaryKey<TEntity>();
+
+        var value = EntityMetadata.GetPrimaryKeyValue(entity)?.ToString();
+
+        var filter = Builders<TEntity>.Filter.Eq(
+            primaryKey.Name,
+            value);
+
+        return filter;
     }
 }

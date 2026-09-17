@@ -4,15 +4,13 @@ using System.Linq.Expressions;
 namespace DataAccess.Abstractions.Interfaces;
 
 public interface IDataAccessContext<TEntity>
-   where TEntity : class, IBaseEntity
+   where TEntity : class
 {
     Task InsertAsync(TEntity entity);
 
     Task UpdateAsync(TEntity entity);
 
     Task DeleteAsync(TEntity entity);
-
-    Task<TEntity?> SelectByIdAsync(string id);
 
     Task<TEntity?> FirstOrDefaultAsync(Query<TEntity> query);
 

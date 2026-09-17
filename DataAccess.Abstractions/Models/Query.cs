@@ -1,6 +1,3 @@
-using System.ComponentModel.Design;
-using System.Linq.Expressions;
-
 namespace DataAccess.Abstractions.Models;
 
 public sealed record Query<TEntity>

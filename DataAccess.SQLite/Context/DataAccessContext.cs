@@ -1,13 +1,12 @@
 ﻿using DataAccess.Abstractions.Interfaces;
 using DataAccess.Abstractions.Models;
+using DataAccess.Core.Metadata;
 using DataAccess.SQLite.ClassMap;
 using Microsoft.Extensions.Logging;
 using SQLite;
 using System.Collections;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
-using PrimaryKeyDefinition = DataAccess.Abstractions.Attributes.PrimaryKeyAttribute;
 
 namespace DataAccess.SQLite.Context;
 
@@ -15,7 +14,7 @@ namespace DataAccess.SQLite.Context;
 /// If you want to know more about SQLite, please visit: https://github.com/praeclarum/sqlite-net
 /// </summary>
 /// <typeparam name="TEntity"></typeparam>
-internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity> where TEntity : class, IBaseEntity, new()
+internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity> where TEntity : class, new()
 {
     private readonly SQLiteAsyncConnection database;
     private readonly ILogger<DataAccessContext<TEntity>> logger;
@@ -39,9 +38,9 @@ internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity> w
     {
         await initialization;
 
-        var primaryKey = GetPrimaryKeyProperty();
+        var primaryKey = EntityMetadata.GetPrimaryKey<TEntity>();
 
-        var primaryKeyValue = primaryKey.GetValue(entity);
+        var primaryKeyValue = EntityMetadata.GetPrimaryKeyValue(entity)?.ToString();
 
         if (primaryKeyValue is null)
         {
@@ -84,9 +83,9 @@ internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity> w
     {
         await initialization;
 
-        var primaryKey = GetPrimaryKeyProperty();
+        var primaryKey = EntityMetadata.GetPrimaryKey<TEntity>();
 
-        var primaryKeyValue = primaryKey.GetValue(entity);
+        var primaryKeyValue = EntityMetadata.GetPrimaryKeyValue(entity)?.ToString();
 
         if (primaryKeyValue is null)
         {
@@ -107,29 +106,6 @@ internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity> w
         await database.ExecuteAsync(
             sql,
             primaryKeyValue);
-    }
-
-    private static PropertyInfo GetPrimaryKeyProperty()
-    {
-        var primaryKey = typeof(TEntity)
-            .GetProperties()
-            .SingleOrDefault(x =>
-                x.GetCustomAttribute<PrimaryKeyDefinition>() is not null);
-
-        return primaryKey
-            ?? throw new InvalidOperationException(
-                $"Entity '{typeof(TEntity).Name}' must define a [PrimaryKey].");
-    }
-
-    public async Task<TEntity?> SelectByIdAsync(string id)
-    {
-        await initialization;
-
-        logger.LogDebug($"[SQLite] SELECT '{typeof(TEntity).Name}' WHERE Id = '{id}'");
-
-        return await database
-            .Table<TEntity>()
-            .FirstOrDefaultAsync(x => x.Id == id);
     }
 
     public async Task<TEntity?> FirstOrDefaultAsync(
