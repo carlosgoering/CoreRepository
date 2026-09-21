@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\Cache\DataAccess.Cache.Abstractions\DataAccess.Cache.Abstractions.csproj" />
     <ProjectReference Include="..\DataAccess.Abstractions\DataAccess.Abstractions.csproj" />
   </ItemGroup>
 

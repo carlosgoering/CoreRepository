@@ -2,10 +2,9 @@
 using DataAccess.Abstractions.Models;
 using DataAccess.Cache.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
 
 namespace DataAccess.Core.Repository;
-
-using System.Text.Json;
 
 public class DataRepository<TEntity> : IRepository<TEntity>
     where TEntity : class, new()
