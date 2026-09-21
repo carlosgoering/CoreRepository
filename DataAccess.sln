@@ -27,8 +27,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAccess.Cache.Abstractio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAccess.Cache.MemoryCache", "Cache\DataAccess.Cache.MemoryCache\DataAccess.Cache.MemoryCache.csproj", "{43324209-469C-4FCF-9CEF-68873AC1ABE7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAccess", "DataAccess.csproj", "{0B23E267-3744-498A-B562-D511475FD10C}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

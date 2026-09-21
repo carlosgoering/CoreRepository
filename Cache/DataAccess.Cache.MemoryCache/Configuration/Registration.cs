@@ -5,7 +5,7 @@ namespace DataAccess.Cache.MemoryCache.Configuration;
 
 public static class Registration
 {
-    public static IServiceCollection AddDefaultCacheProvider(
+    public static IServiceCollection AddDataAccessMemoryCache(
         this IServiceCollection services)
     {
         services.AddMemoryCache();
