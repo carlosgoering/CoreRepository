@@ -7,7 +7,7 @@ public sealed record PagedResult<T>
 
     public required int PageSize { get; init; }
 
-    public required int TotalCount { get; init; }
+    public required long TotalCount { get; init; }
 
     public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
 
