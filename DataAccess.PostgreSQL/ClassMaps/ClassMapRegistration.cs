@@ -42,7 +42,13 @@ internal static class ClassMapRegistration
                     $"\"{x.Name}\" {sqlType}";
 
                 if (x == primaryKey)
+                {
                     definition += " PRIMARY KEY";
+                }
+                else if (!IsNullable(x.PropertyType))
+                {
+                    definition += " NOT NULL";
+                }
 
                 return definition;
             })
@@ -60,8 +66,11 @@ internal static class ClassMapRegistration
 
         try
         {
-            await using var connection = await database.OpenConnectionAsync();
-            await using var command = new NpgsqlCommand(sql, connection);
+            await using var connection =
+                await database.OpenConnectionAsync();
+
+            await using var command =
+                new NpgsqlCommand(sql, connection);
 
             await command.ExecuteNonQueryAsync();
 
@@ -78,22 +87,36 @@ internal static class ClassMapRegistration
         }
     }
 
+    private static bool IsNullable(Type type)
+    {
+        return Nullable.GetUnderlyingType(type) is not null;
+    }
+
     private static string GetSqlType(Type type)
     {
         type = Nullable.GetUnderlyingType(type) ?? type;
 
+        if (type.IsEnum)
+            type = Enum.GetUnderlyingType(type);
+
         return Type.GetTypeCode(type) switch
         {
-            TypeCode.Int16 => "SMALLINT",
-            TypeCode.Int32 => "INTEGER",
-            TypeCode.Int64 => "BIGINT",
             TypeCode.Byte => "SMALLINT",
+            TypeCode.SByte => "SMALLINT",
+            TypeCode.Int16 => "SMALLINT",
+            TypeCode.UInt16 => "INTEGER",
+            TypeCode.Int32 => "INTEGER",
+            TypeCode.UInt32 => "BIGINT",
+            TypeCode.Int64 => "BIGINT",
+            TypeCode.UInt64 => "NUMERIC",
+
             TypeCode.Boolean => "BOOLEAN",
             TypeCode.Decimal => "NUMERIC",
             TypeCode.Double => "DOUBLE PRECISION",
             TypeCode.Single => "REAL",
-            TypeCode.DateTime => "TIMESTAMP",
+            TypeCode.DateTime => "TIMESTAMP WITH TIME ZONE",
             TypeCode.String => "TEXT",
+
             _ => "TEXT"
         };
     }

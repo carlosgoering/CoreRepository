@@ -4,7 +4,6 @@ using DataAccess.Core.Repository;
 using DataAccess.MySQL.Context;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using MySqlConnector;
 
 namespace DataAccess.MySQL.Configuration;
 
@@ -24,10 +23,7 @@ public static class Registration
                 .GetRequiredService<IOptions<Database>>()
                 .Value;
 
-            var dataSourceBuilder =
-                new MySqlDataSourceBuilder(database.ConnectionString);
-            
-            return dataSourceBuilder.Build();
+            return database.ConnectionString;
         });
 
         services.AddSingleton(

@@ -4,6 +4,7 @@ using DataAccess.Core.Metadata;
 using DataAccess.PostgreSQL.ClassMaps;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using NpgsqlTypes;
 using System.Collections;
 using System.Text;
 
@@ -62,9 +63,11 @@ internal sealed class DataAccessContext<TEntity> :
 
         for (var i = 0; i < properties.Length; i++)
         {
-            command.Parameters.AddWithValue(
-                $"@p{i}",
-                properties[i].GetValue(entity) ?? DBNull.Value);
+            command.Parameters.Add(
+                CreateParameter(
+                    $"@p{i}",
+                    properties[i].GetValue(entity),
+                    properties[i].PropertyType));
         }
 
         await command.ExecuteNonQueryAsync();
@@ -118,14 +121,18 @@ internal sealed class DataAccessContext<TEntity> :
 
         for (var i = 0; i < properties.Length; i++)
         {
-            command.Parameters.AddWithValue(
-                $"@p{i}",
-                properties[i].GetValue(entity) ?? DBNull.Value);
+            command.Parameters.Add(
+                CreateParameter(
+                    $"@p{i}",
+                    properties[i].GetValue(entity),
+                    properties[i].PropertyType));
         }
 
-        command.Parameters.AddWithValue(
-            "@primaryKey",
-            primaryKeyValue);
+        command.Parameters.Add(
+            CreateParameter(
+                "@primaryKey",
+                primaryKeyValue,
+                primaryKey.PropertyType));
 
         await command.ExecuteNonQueryAsync();
     }
@@ -162,9 +169,11 @@ internal sealed class DataAccessContext<TEntity> :
         await using var command =
             new NpgsqlCommand(sql, connection);
 
-        command.Parameters.AddWithValue(
-            "@primaryKey",
-            primaryKeyValue);
+        command.Parameters.Add(
+            CreateParameter(
+                "@primaryKey",
+                primaryKeyValue,
+                primaryKey.PropertyType));
 
         await command.ExecuteNonQueryAsync();
     }
@@ -339,9 +348,10 @@ internal sealed class DataAccessContext<TEntity> :
                     placeholders.Add(parameterName);
 
                     parameters.Add(
-                        new NpgsqlParameter(
+                        CreateParameter(
                             parameterName,
-                            value ?? DBNull.Value));
+                            value,
+                            property.PropertyType));
                 }
 
                 conditions.Add(
@@ -374,9 +384,10 @@ internal sealed class DataAccessContext<TEntity> :
                 $"\"{filter.Field}\" {sqlOperator} {parameter}");
 
             parameters.Add(
-                new NpgsqlParameter(
+                CreateParameter(
                     parameter,
-                    convertedValue ?? DBNull.Value));
+                    convertedValue,
+                    property.PropertyType));
         }
 
         var sql = new StringBuilder(
@@ -406,14 +417,16 @@ internal sealed class DataAccessContext<TEntity> :
             sql.Append(" OFFSET @skip");
 
             parameters.Add(
-                new NpgsqlParameter(
+                CreateParameter(
                     "@pageSize",
-                    query.PageSize));
+                    query.PageSize,
+                    typeof(int)));
 
             parameters.Add(
-                new NpgsqlParameter(
+                CreateParameter(
                     "@skip",
-                    query.Skip));
+                    query.Skip,
+                    typeof(int)));
         }
 
         return new QueryDefinition(
@@ -507,6 +520,60 @@ internal sealed class DataAccessContext<TEntity> :
         return entity;
     }
 
+    private static NpgsqlParameter CreateParameter(
+        string name,
+        object? value,
+        Type targetType)
+    {
+        var parameterType =
+            Nullable.GetUnderlyingType(targetType)
+            ?? targetType;
+
+        if (parameterType.IsEnum)
+            parameterType = Enum.GetUnderlyingType(parameterType);
+
+        var convertedValue =
+            ConvertValue(value, targetType);
+
+        return new NpgsqlParameter
+        {
+            ParameterName = name,
+            Value = convertedValue ?? DBNull.Value,
+            NpgsqlDbType = GetNpgsqlDbType(parameterType),
+            IsNullable = Nullable.GetUnderlyingType(targetType) is not null
+        };
+    }
+
+    private static NpgsqlDbType GetNpgsqlDbType(Type type)
+    {
+        type = Nullable.GetUnderlyingType(type) ?? type;
+
+        if (type.IsEnum)
+            type = Enum.GetUnderlyingType(type);
+
+        return Type.GetTypeCode(type) switch
+        {
+            TypeCode.Byte => NpgsqlDbType.Smallint,
+            TypeCode.SByte => NpgsqlDbType.Smallint,
+            TypeCode.Int16 => NpgsqlDbType.Smallint,
+            TypeCode.UInt16 => NpgsqlDbType.Integer,
+            TypeCode.Int32 => NpgsqlDbType.Integer,
+            TypeCode.UInt32 => NpgsqlDbType.Bigint,
+            TypeCode.Int64 => NpgsqlDbType.Bigint,
+            TypeCode.UInt64 => NpgsqlDbType.Numeric,
+
+            TypeCode.Boolean => NpgsqlDbType.Boolean,
+            TypeCode.Decimal => NpgsqlDbType.Numeric,
+            TypeCode.Double => NpgsqlDbType.Double,
+            TypeCode.Single => NpgsqlDbType.Real,
+            TypeCode.DateTime => NpgsqlDbType.TimestampTz,
+            TypeCode.String => NpgsqlDbType.Text,
+
+            _ => throw new NotSupportedException(
+                $"Type '{type.FullName}' is not supported by PostgreSQL.")
+        };
+    }
+
     private static object? ConvertValue(
         object? value,
         Type targetType)
@@ -518,16 +585,15 @@ internal sealed class DataAccessContext<TEntity> :
             Nullable.GetUnderlyingType(targetType)
             ?? targetType;
 
-        if (underlyingType.IsInstanceOfType(value))
-            return value;
-
         if (underlyingType.IsEnum)
         {
-            return Enum.Parse(
-                underlyingType,
-                value.ToString()!,
-                true);
+            return Convert.ChangeType(
+                value,
+                Enum.GetUnderlyingType(underlyingType));
         }
+
+        if (underlyingType.IsInstanceOfType(value))
+            return value;
 
         return Convert.ChangeType(
             value,
