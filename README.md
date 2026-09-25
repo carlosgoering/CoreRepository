@@ -30,6 +30,272 @@ Each provider project contains only the implementation and configuration require
 
 ---
 
+## Installation
+
+### Requirements
+
+The application using DataAccess must have:
+
+* .NET SDK compatible with the library target framework.
+* The database engine required by the selected provider.
+* The corresponding DataAccess provider package.
+
+The application only needs to install the provider it intends to use.
+
+### Install the Core Packages
+
+```bash
+dotnet add package DataAccess.Abstractions
+dotnet add package DataAccess.Core
+```
+
+### Install a Database Provider
+
+#### MongoDB
+
+```bash
+dotnet add package DataAccess.MongoDB
+```
+
+#### SQLite
+
+```bash
+dotnet add package DataAccess.SQLite
+```
+
+#### Firestore
+
+```bash
+dotnet add package DataAccess.Firestore
+```
+
+#### MySQL
+
+```bash
+dotnet add package DataAccess.MySQL
+```
+
+#### PostgreSQL
+
+```bash
+dotnet add package DataAccess.PostgreSQL
+```
+
+#### SQL Server
+
+```bash
+dotnet add package DataAccess.SQLServer
+```
+
+For example, an application using PostgreSQL requires:
+
+```bash
+dotnet add package DataAccess.Abstractions
+dotnet add package DataAccess.Core
+dotnet add package DataAccess.PostgreSQL
+```
+
+---
+
+## Quick Start
+
+The following example uses PostgreSQL and demonstrates the minimum setup required to start using the library.
+
+### 1. Create a project
+
+Create a new ASP.NET Core application:
+
+```bash
+dotnet new webapi -n MyApplication
+cd MyApplication
+```
+
+Install the required packages:
+
+```bash
+dotnet add package DataAccess.Abstractions
+dotnet add package DataAccess.Core
+dotnet add package DataAccess.PostgreSQL
+```
+
+---
+
+### 2. Create an Entity
+
+Create an entity with a property marked with `[PrimaryKey]`:
+
+```csharp
+using DataAccess.Abstractions.Attributes;
+
+public class Project
+{
+    [PrimaryKey]
+    public Guid ProjectId { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public DateTime CreatedAt { get; set; }
+}
+```
+
+No base class or `IBaseEntity` implementation is required.
+
+---
+
+### 3. Configure the Database
+
+Add the selected provider to `appsettings.json`:
+
+```json
+{
+  "DBOfChoice": "PostgreSQL",
+
+  "PostgreSQLDatabase": {
+    "ConnectionString": "Host=localhost;Port=5432;Database=YourDatabase;Username=postgres;Password=your_password;"
+  }
+}
+```
+
+Only the configuration for the selected provider is required.
+
+---
+
+### 4. Register DataAccess
+
+In `Program.cs`:
+
+```csharp
+builder.Services.AddDbProvider(
+    builder.Configuration);
+```
+
+The provider registration reads `DBOfChoice`, loads the corresponding configuration section, and registers the required DataAccess services.
+
+No manual registration of `IRepository<TEntity>` or `IDataAccessContext<TEntity>` is required.
+
+---
+
+### 5. Inject the Repository
+
+A service can now consume the database-independent repository:
+
+```csharp
+using DataAccess.Abstractions.Interfaces;
+
+public class ProjectService
+{
+    private readonly IRepository<Project> repository;
+
+    public ProjectService(
+        IRepository<Project> repository)
+    {
+        this.repository = repository;
+    }
+
+    public async Task CreateAsync(Project project)
+    {
+        await repository.InsertAsync(project);
+    }
+}
+```
+
+---
+
+### 6. Insert an Entity
+
+```csharp
+var project = new Project
+{
+    ProjectId = Guid.NewGuid(),
+    Name = "My Project",
+    CreatedAt = DateTime.UtcNow
+};
+
+await repository.InsertAsync(project);
+```
+
+The PostgreSQL provider translates this operation into the corresponding SQL statement.
+
+The application does not need to know how the entity is persisted.
+
+---
+
+### 7. Query an Entity
+
+Queries are created using the database-independent `Query<TEntity>` model:
+
+```csharp
+var project = await repository.FirstOrDefaultAsync(
+    new Query<Project>
+    {
+        Filters =
+        [
+            new QueryFilter(
+                nameof(Project.ProjectId),
+                QueryOperator.Equal,
+                projectId)
+        ]
+    });
+```
+
+The provider translates the query into the appropriate database-specific operation.
+
+---
+
+### 8. Update an Entity
+
+```csharp
+project.Name = "Updated Project";
+
+await repository.UpdateAsync(project);
+```
+
+---
+
+### 9. Delete an Entity
+
+```csharp
+await repository.DeleteAsync(project);
+```
+
+---
+
+### 10. Use Filtering and Pagination
+
+```csharp
+var result = await repository.SelectPagedAsync(
+    new Query<Project>
+    {
+        Filters =
+        [
+            new QueryFilter(
+                nameof(Project.Name),
+                QueryOperator.Equal,
+                "My Project")
+        ],
+
+        Order = new QueryOrder(
+            nameof(Project.CreatedAt),
+            Descending: true),
+
+        Page = 1,
+        PageSize = 20
+    });
+```
+
+The result contains the selected entities together with pagination metadata:
+
+```csharp
+result.Items
+result.Page
+result.PageSize
+result.TotalCount
+```
+
+At this point the application is using the same repository API regardless of the selected database provider.
+
+---
+
 ## Entity Primary Key
 
 Entities do not need to implement a shared base interface such as `IBaseEntity`.
@@ -37,6 +303,8 @@ Entities do not need to implement a shared base interface such as `IBaseEntity`.
 When an entity requires a primary key, it can identify the property using the `PrimaryKeyAttribute`:
 
 ```csharp
+using DataAccess.Abstractions.Attributes;
+
 public class Project
 {
     [PrimaryKey]
@@ -65,9 +333,11 @@ This keeps the repository independent from a specific entity base class or fixed
 
 ---
 
-## appsettings.json
+## Configuration
 
 The consuming application is responsible for selecting the database provider and supplying its configuration.
+
+### appsettings.json
 
 ```json
 {
@@ -123,7 +393,8 @@ Only the configuration required by the selected provider needs to be supplied.
 Register the provider during application startup:
 
 ```csharp
-builder.Services.AddDbProvider(builder.Configuration);
+builder.Services.AddDbProvider(
+    builder.Configuration);
 ```
 
 Example implementation:
@@ -133,7 +404,8 @@ public static IServiceCollection AddDbProvider(
     this IServiceCollection services,
     IConfiguration configuration)
 {
-    var dbChoice = configuration.GetValue<string>(Definitions.DBOfChoice);
+    var dbChoice = configuration.GetValue<string>(
+        Definitions.DBOfChoice);
 
     if (string.IsNullOrWhiteSpace(dbChoice))
         throw new InvalidOperationException(
