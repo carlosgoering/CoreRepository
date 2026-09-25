@@ -116,6 +116,7 @@ internal static class ClassMapRegistration
             TypeCode.Single => "REAL",
             TypeCode.DateTime => "TIMESTAMP WITH TIME ZONE",
             TypeCode.String => "TEXT",
+            TypeCode.Object when type == typeof(Guid) => "UUID",
 
             _ => "TEXT"
         };

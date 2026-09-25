@@ -463,10 +463,39 @@ internal sealed class DataAccessContext<TEntity> :
             definition.Parameters);
     }
 
+    private static QueryDefinition BuildSelectOneQuery(
+        Query<TEntity>? query)
+    {
+        var tableName = typeof(TEntity).Name;
+
+        if (query is null)
+        {
+            return new QueryDefinition(
+                $"SELECT 1 FROM \"{tableName}\"",
+                []);
+        }
+
+        var definition = BuildQuery(
+            query with
+            {
+                Order = null
+            },
+            includePaging: false);
+
+        var sql = definition.Sql
+            .Replace(
+                $"SELECT * FROM \"{tableName}\"",
+                $"SELECT 1 FROM \"{tableName}\"");
+
+        return new QueryDefinition(
+            sql,
+            definition.Parameters);
+    }
+
     private static QueryDefinition BuildExistsQuery(
         Query<TEntity> query)
     {
-        var count = BuildCountQuery(query);
+        var count = BuildSelectOneQuery(query);
 
         var sql = $"""
             SELECT EXISTS(
@@ -568,6 +597,8 @@ internal sealed class DataAccessContext<TEntity> :
             TypeCode.Single => NpgsqlDbType.Real,
             TypeCode.DateTime => NpgsqlDbType.TimestampTz,
             TypeCode.String => NpgsqlDbType.Text,
+
+            TypeCode.Object when type == typeof(Guid) => NpgsqlDbType.Uuid,
 
             _ => throw new NotSupportedException(
                 $"Type '{type.FullName}' is not supported by PostgreSQL.")
