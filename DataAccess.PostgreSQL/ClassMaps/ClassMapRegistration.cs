@@ -1,6 +1,8 @@
+using DataAccess.Abstractions.Attributes;
 using DataAccess.Core.Metadata;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using System.Reflection;
 
 namespace DataAccess.PostgreSQL.ClassMaps;
 
@@ -11,25 +13,14 @@ internal static class ClassMapRegistration
         ILogger logger)
         where TEntity : class, new()
     {
+        var tableName = EntityMetadata.GetTableName<TEntity>();
         var type = typeof(TEntity);
-        var tableName = type.Name;
 
         logger.LogInformation(
-            $"[PostgreSQL] Registering table '{tableName}'.");
+            "[PostgreSQL] Registering table '{TableName}'.",
+            tableName);
 
         var primaryKey = EntityMetadata.GetPrimaryKey<TEntity>();
-
-        if (primaryKey is null)
-        {
-            var exception = new InvalidOperationException(
-                $"Entity '{type.Name}' must define a [PrimaryKey].");
-
-            logger.LogError(
-                exception,
-                $"[PostgreSQL] Failed to register table '{tableName}'.");
-
-            throw exception;
-        }
 
         var columns = type
             .GetProperties()
@@ -38,8 +29,7 @@ internal static class ClassMapRegistration
             {
                 var sqlType = GetSqlType(x.PropertyType);
 
-                var definition =
-                    $"\"{x.Name}\" {sqlType}";
+                var definition = $"\"{x.Name}\" {sqlType}";
 
                 if (x == primaryKey)
                 {
@@ -50,19 +40,44 @@ internal static class ClassMapRegistration
                     definition += " NOT NULL";
                 }
 
+                if (x.GetCustomAttribute<UniqueAttribute>() is not null)
+                {
+                    definition += " UNIQUE";
+                }
+
                 return definition;
             })
+            .ToArray();
+
+        var indexes = type
+            .GetProperties()
+            .Where(x =>
+                x.CanRead &&
+                x.CanWrite &&
+                x != primaryKey &&
+                x.GetCustomAttribute<UniqueAttribute>() is null &&
+                x.GetCustomAttribute<IndexedAttribute>() is not null)
+            .Select(x =>
+                $"""
+                CREATE INDEX IF NOT EXISTS "IX_{tableName}_{x.Name}"
+                ON "{tableName}" ("{x.Name}");
+                """)
             .ToArray();
 
         var sql = $"""
             CREATE TABLE IF NOT EXISTS "{tableName}"
             (
-                {string.Join(",\n", columns)}
+                {string.Join(",\n    ", columns)}
             );
+
+            {string.Join("\n\n", indexes)}
             """;
 
         logger.LogDebug(
-            $"[PostgreSQL] SQL for '{tableName}':{Environment.NewLine}{sql}");
+            "[PostgreSQL] SQL for '{TableName}':{NewLine}{Sql}",
+            tableName,
+            Environment.NewLine,
+            sql);
 
         try
         {
@@ -75,13 +90,15 @@ internal static class ClassMapRegistration
             await command.ExecuteNonQueryAsync();
 
             logger.LogInformation(
-                $"[PostgreSQL] Table '{tableName}' created/verified successfully.");
+                "[PostgreSQL] Table '{TableName}' created/verified successfully.",
+                tableName);
         }
         catch (Exception ex)
         {
             logger.LogError(
                 ex,
-                $"[PostgreSQL] Failed to create table '{tableName}'.");
+                "[PostgreSQL] Failed to create table '{TableName}'.",
+                tableName);
 
             throw;
         }
@@ -116,6 +133,7 @@ internal static class ClassMapRegistration
             TypeCode.Single => "REAL",
             TypeCode.DateTime => "TIMESTAMP WITH TIME ZONE",
             TypeCode.String => "TEXT",
+
             TypeCode.Object when type == typeof(Guid) => "UUID",
 
             _ => "TEXT"
