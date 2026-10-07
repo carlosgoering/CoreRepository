@@ -21,4 +21,6 @@
   </Folder>
   <Project Path="DataAccess.Abstractions/DataAccess.Abstractions.csproj" />
   <Project Path="DataAccess.Core/DataAccess.Core.csproj" />
+  <Project Path="DataAccess.MongoDB.Tests/DataAccess.MongoDB.Tests.csproj" />
+  <Project Path="DataAccess.SQLite.Tests/DataAccess.SQLite.Tests.csproj" />
 </Solution>

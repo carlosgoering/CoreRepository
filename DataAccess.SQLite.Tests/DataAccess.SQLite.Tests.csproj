@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="*" />
+		<PackageReference Include="sqlite-net-pcl" Version="1.11.285" />
+		<PackageReference Include="xunit" Version="*" />
+		<PackageReference Include="xunit.runner.visualstudio" Version="*" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\DataAccess.Abstractions\DataAccess.Abstractions.csproj" />
+	  <ProjectReference Include="..\DataAccess.SQLite\DataAccess.SQLite.csproj" />
+	</ItemGroup>
+</Project>
