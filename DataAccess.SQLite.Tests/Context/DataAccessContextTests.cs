@@ -24,17 +24,15 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
 
         var result = await context.FirstOrDefaultAsync(
             new Query<TestEntity>
-            {
-                Filters =
-                [
-                    new QueryFilter
-                    {
-                        Field = nameof(TestEntity.Id),
-                        Operator = QueryOperator.Equal,
-                        Value = "1"
-                    }
-                ]
-            });
+                {
+                    Filters =
+                    [
+                        new QueryFilter(
+                        nameof(TestEntity.Id),
+                        QueryOperator.Equal,
+                        entity.Id)
+                    ]
+                });
 
         Assert.NotNull(result);
         Assert.Equal("1", result.Id);
@@ -85,18 +83,16 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
         await context.InsertAsync(CreateEntity("4"));
 
         var result = await context.FirstOrDefaultAsync(
-            new Query<TestEntity>
-            {
-                Filters =
-                [
-                    new QueryFilter
-                    {
-                        Field = nameof(TestEntity.Email),
-                        Operator = QueryOperator.Equal,
-                        Value = "test4@test.com"
-                    }
-                ]
-            });
+              new Query<TestEntity>
+                {
+                    Filters =
+                    [
+                        new QueryFilter(
+                        nameof(TestEntity.Email),
+                        QueryOperator.Equal,
+                        "test4@test.com")
+                    ]
+                });
 
         Assert.NotNull(result);
         Assert.Equal("4", result.Id);
@@ -112,19 +108,16 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
         await context.InsertAsync(CreateEntity("7", "B"));
 
         var result = await context.SelectAsync(
-            new Query<TestEntity>
-            {
-                Filters =
-                [
-                    new QueryFilter
-                    {
-                        Field = nameof(TestEntity.Category),
-                        Operator = QueryOperator.Equal,
-                        Value = "A"
-                    }
-                ],
-                PageSize = 10
-            });
+              new Query<TestEntity>
+                {
+                    Filters =
+                    [
+                        new QueryFilter(
+                        nameof(TestEntity.Category),
+                        QueryOperator.Equal,
+                        "A")
+                    ]
+                });
 
         Assert.Equal(2, result.Count);
         Assert.All(result, x => Assert.Equal("A", x.Category));
@@ -140,19 +133,16 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
         await context.InsertAsync(CreateEntity("10"));
 
         var result = await context.SelectAsync(
-            new Query<TestEntity>
-            {
-                Filters =
-                [
-                    new QueryFilter
-                    {
-                        Field = nameof(TestEntity.Id),
-                        Operator = QueryOperator.In,
-                        Value = new[] { "8", "10" }
-                    }
-                ],
-                PageSize = 10
-            });
+              new Query<TestEntity>
+                {
+                    Filters =
+                    [
+                        new QueryFilter(
+                        nameof(TestEntity.Id),
+                        QueryOperator.In,
+                        Value = new[] { "8", "10" })
+                    ]
+                });
 
         Assert.Equal(2, result.Count);
         Assert.Contains(result, x => x.Id == "8");
@@ -279,11 +269,11 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
             Filters =
             [
                 new QueryFilter
-                {
+                (
                     Field = nameof(TestEntity.Id),
                     Operator = QueryOperator.Equal,
                     Value = id
-                }
+                )
             ]
         };
     }

@@ -8,7 +8,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="*" />
-		<PackageReference Include="sqlite-net-pcl" Version="1.11.285" />
+		<PackageReference Include="sqlite-net-pcl" Version="*" />
 		<PackageReference Include="xunit" Version="*" />
 		<PackageReference Include="xunit.runner.visualstudio" Version="*" />
 	</ItemGroup>

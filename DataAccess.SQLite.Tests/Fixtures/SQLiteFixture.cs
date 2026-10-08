@@ -32,13 +32,8 @@ public sealed class SQLiteFixture : IAsyncLifetime
 
     public IDataAccessContext<TestEntity> CreateContext()
     {
-        var loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.SetMinimumLevel(LogLevel.Debug);
-        });
 
         return new DataAccessContextTests<TestEntity>(
-            Database,
-            loggerFactory.CreateLogger<DataAccessContextTests<TestEntity>>());
+            Database);
     }
 }
