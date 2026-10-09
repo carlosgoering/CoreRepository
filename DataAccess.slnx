@@ -17,8 +17,8 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Tests/">
-    <Project Path="DataAccess.PostgreSQL.Tests/DataAccess.PostgreSQL.Tests.csproj" />
     <Project Path="DataAccess.MongoDB.Tests/DataAccess.MongoDB.Tests.csproj" />
+    <Project Path="DataAccess.PostgreSQL.Tests/DataAccess.PostgreSQL.Tests.csproj" />
     <Project Path="DataAccess.SQLite.Tests/DataAccess.SQLite.Tests.csproj" />
   </Folder>
   <Project Path="DataAccess.Abstractions/DataAccess.Abstractions.csproj" />

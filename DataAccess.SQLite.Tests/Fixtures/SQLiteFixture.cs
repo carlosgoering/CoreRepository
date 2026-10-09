@@ -1,5 +1,3 @@
-using DataAccess.Abstractions.Interfaces;
-using Microsoft.Extensions.Logging;
 using SQLite;
 using Xunit;
 
@@ -7,7 +5,7 @@ namespace DataAccess.SQLite.Tests.Fixtures;
 
 public sealed class SQLiteFixture : IAsyncLifetime
 {
-    private SQLiteAsyncConnection? database;
+    public SQLiteAsyncConnection database { get; private set; } = null!;
 
     public SQLiteAsyncConnection Database =>
         database ?? throw new InvalidOperationException(
@@ -29,11 +27,9 @@ public sealed class SQLiteFixture : IAsyncLifetime
         if (database is not null)
             await database.CloseAsync();
     }
-
-    public IDataAccessContext<TestEntity> CreateContext()
+    
+    public async Task CleanAsync()
     {
-
-        return new DataAccessContextTests<TestEntity>(
-            Database);
+        await database.DeleteAllAsync<TestEntity>();
     }
 }

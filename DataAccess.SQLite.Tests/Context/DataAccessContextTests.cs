@@ -1,10 +1,13 @@
 using DataAccess.Abstractions.Models;
 using DataAccess.SQLite.Tests.Fixtures;
+using DataAccess.SQLite.Context;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace DataAccess.SQLite.Tests;
 
-public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
+public sealed class DataAccessContextTests 
+    : IClassFixture<SQLiteFixture>
 {
     private readonly SQLiteFixture fixture;
 
@@ -12,11 +15,24 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     {
         this.fixture = fixture;
     }
+    
+    private async Task<DataAccessContext<TestEntity>> CreateContextAsync()
+    {
+        var context = new DataAccessContext<TestEntity>(
+            fixture.database,
+            NullLogger<DataAccessContext<TestEntity>>.Instance);
+
+        await context.CountAsync();
+        
+        await fixture.CleanAsync();
+        
+        return context;
+    }
 
     [Fact]
     public async Task InsertAsync_ShouldInsertEntity()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         var entity = CreateEntity("1");
 
@@ -24,15 +40,17 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
 
         var result = await context.FirstOrDefaultAsync(
             new Query<TestEntity>
-                {
-                    Filters =
-                    [
-                        new QueryFilter(
+            {
+                Filters =
+                [
+                    new QueryFilter
+                    (
                         nameof(TestEntity.Id),
                         QueryOperator.Equal,
-                        entity.Id)
-                    ]
-                });
+                        "1"
+                    )
+                ]
+            });
 
         Assert.NotNull(result);
         Assert.Equal("1", result.Id);
@@ -42,7 +60,7 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     [Fact]
     public async Task UpdateAsync_ShouldUpdateEntity()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         var entity = CreateEntity("2");
 
@@ -62,7 +80,7 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     [Fact]
     public async Task DeleteAsync_ShouldDeleteEntity()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         var entity = CreateEntity("3");
 
@@ -78,21 +96,23 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     [Fact]
     public async Task FirstOrDefaultAsync_ShouldReturnMatchingEntity()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         await context.InsertAsync(CreateEntity("4"));
 
         var result = await context.FirstOrDefaultAsync(
-              new Query<TestEntity>
-                {
-                    Filters =
-                    [
-                        new QueryFilter(
+            new Query<TestEntity>
+            {
+                Filters =
+                [
+                    new QueryFilter
+                    (
                         nameof(TestEntity.Email),
                         QueryOperator.Equal,
-                        "test4@test.com")
-                    ]
-                });
+                        "test4@test.com"
+                    )
+                ]
+            });
 
         Assert.NotNull(result);
         Assert.Equal("4", result.Id);
@@ -101,23 +121,26 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     [Fact]
     public async Task SelectAsync_ShouldApplyFilters()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         await context.InsertAsync(CreateEntity("5", "A"));
         await context.InsertAsync(CreateEntity("6", "A"));
         await context.InsertAsync(CreateEntity("7", "B"));
 
         var result = await context.SelectAsync(
-              new Query<TestEntity>
-                {
-                    Filters =
-                    [
-                        new QueryFilter(
+            new Query<TestEntity>
+            {
+                Filters =
+                [
+                    new QueryFilter
+                    (
                         nameof(TestEntity.Category),
                         QueryOperator.Equal,
-                        "A")
-                    ]
-                });
+                        "A"
+                    )
+                ],
+                PageSize = 10
+            });
 
         Assert.Equal(2, result.Count);
         Assert.All(result, x => Assert.Equal("A", x.Category));
@@ -126,23 +149,28 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     [Fact]
     public async Task SelectAsync_ShouldSupportIn()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         await context.InsertAsync(CreateEntity("8"));
         await context.InsertAsync(CreateEntity("9"));
         await context.InsertAsync(CreateEntity("10"));
 
         var result = await context.SelectAsync(
-              new Query<TestEntity>
-                {
-                    Filters =
-                    [
-                        new QueryFilter(
+            new Query<TestEntity>
+            {
+                Filters =
+                [
+                    new QueryFilter
+                    (
                         nameof(TestEntity.Id),
                         QueryOperator.In,
-                        Value = new[] { "8", "10" })
-                    ]
-                });
+                        new[] { "8", "10" }
+                        
+                    )
+                ],
+                PageSize = 10
+            });
+
 
         Assert.Equal(2, result.Count);
         Assert.Contains(result, x => x.Id == "8");
@@ -152,7 +180,7 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     [Fact]
     public async Task SelectPagedAsync_ShouldReturnCorrectPage()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         for (var i = 1; i <= 5; i++)
             await context.InsertAsync(CreateEntity($"page-{i}"));
@@ -163,10 +191,10 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
                 Page = 2,
                 PageSize = 2,
                 Order = new QueryOrder
-                {
-                    Field = nameof(TestEntity.Id),
-                    Descending = false
-                }
+                (
+                    nameof(TestEntity.Id),
+                    false
+                )
             });
 
         Assert.Equal(2, result.Items.Count);
@@ -178,7 +206,7 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     [Fact]
     public async Task CountAsync_ShouldReturnCorrectCount()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         await context.InsertAsync(CreateEntity("count-1"));
         await context.InsertAsync(CreateEntity("count-2"));
@@ -191,7 +219,7 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     [Fact]
     public async Task ExistsAsync_ShouldReturnTrueWhenEntityExists()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         await context.InsertAsync(CreateEntity("exists-1"));
 
@@ -204,7 +232,7 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     [Fact]
     public async Task ExistsAsync_ShouldReturnFalseWhenEntityDoesNotExist()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         var result = await context.ExistsAsync(
             QueryById("does-not-exist"));
@@ -215,7 +243,7 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     [Fact]
     public async Task NullableDateTime_ShouldPreserveNull()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         var entity = CreateEntity("nullable-1");
         entity.UpdatedAt = null;
@@ -232,7 +260,7 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
     [Fact]
     public async Task Enum_ShouldBePersistedAndReadCorrectly()
     {
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         var entity = CreateEntity("enum-1");
         entity.Status = TestStatus.Active;
@@ -270,9 +298,9 @@ public sealed class DataAccessContextTests : IClassFixture<SQLiteFixture>
             [
                 new QueryFilter
                 (
-                    Field = nameof(TestEntity.Id),
-                    Operator = QueryOperator.Equal,
-                    Value = id
+                    nameof(TestEntity.Id),
+                    QueryOperator.Equal,
+                    id
                 )
             ]
         };

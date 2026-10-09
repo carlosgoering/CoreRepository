@@ -17,4 +17,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="DataAccess.SQLite.Tests" />
+	</ItemGroup>
 </Project>
