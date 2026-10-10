@@ -211,8 +211,8 @@ internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity> w
     }
 
     private static AsyncTableQuery<TEntity> ApplyOrder(
-        AsyncTableQuery<TEntity> table,
-        Query<TEntity> query)
+    AsyncTableQuery<TEntity> table,
+    Query<TEntity> query)
     {
         if (query.Order is null)
             return table;
@@ -226,13 +226,8 @@ internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity> w
                 $"Property '{query.Order.Field}' was not found on '{typeof(TEntity).Name}'.");
         }
 
-        var parameter = Expression.Parameter(
-            typeof(TEntity),
-            "x");
-
-        var member = Expression.Property(
-            parameter,
-            property);
+        var parameter = Expression.Parameter(typeof(TEntity), "x");
+        var member = Expression.Property(parameter, property);
 
         var lambda = Expression.Lambda(
             typeof(Func<,>).MakeGenericType(
@@ -241,24 +236,23 @@ internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity> w
             member,
             parameter);
 
-        var method = query.Order.Descending
+        var methodName = query.Order.Descending
             ? "OrderByDescending"
             : "OrderBy";
 
-        var orderMethod = typeof(Queryable)
+        var orderMethod = typeof(AsyncTableQuery<TEntity>)
             .GetMethods()
             .Single(x =>
-                x.Name == method &&
-                x.GetParameters().Length == 2);
+                x.Name == methodName &&
+                x.IsGenericMethodDefinition &&
+                x.GetParameters().Length == 2 &&
+                x.GetParameters()[0].ParameterType == typeof(AsyncTableQuery<TEntity>));
 
-        var genericMethod = orderMethod.MakeGenericMethod(
-            typeof(TEntity),
-            property.PropertyType);
+        var genericMethod = orderMethod.MakeGenericMethod(property.PropertyType);
 
-        return (AsyncTableQuery<TEntity>)
-            genericMethod.Invoke(
-                null,
-                [table, lambda])!;
+        return (AsyncTableQuery<TEntity>)genericMethod.Invoke(
+            table,
+            [lambda])!;
     }
 
     private static Expression<Func<TEntity, bool>> CreateExpression(
