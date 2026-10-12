@@ -237,16 +237,18 @@ internal sealed class DataAccessContext<TEntity> : IDataAccessContext<TEntity> w
             parameter);
 
         var methodName = query.Order.Descending
-            ? "OrderByDescending"
-            : "OrderBy";
+            ? nameof(AsyncTableQuery<TEntity>.OrderByDescending)
+            : nameof(AsyncTableQuery<TEntity>.OrderBy);
 
         var orderMethod = typeof(AsyncTableQuery<TEntity>)
             .GetMethods()
             .Single(x =>
                 x.Name == methodName &&
                 x.IsGenericMethodDefinition &&
-                x.GetParameters().Length == 2 &&
-                x.GetParameters()[0].ParameterType == typeof(AsyncTableQuery<TEntity>));
+                x.GetParameters().Length == 1 &&
+                x.GetParameters()[0].ParameterType.IsGenericType &&
+                x.GetParameters()[0].ParameterType.GetGenericTypeDefinition()
+                == typeof(Expression<>));
 
         var genericMethod = orderMethod.MakeGenericMethod(property.PropertyType);
 
