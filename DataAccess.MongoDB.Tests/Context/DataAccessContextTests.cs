@@ -1,4 +1,5 @@
 using DataAccess.Abstractions.Models;
+using DataAccess.MongoDB.Context;
 using DataAccess.MongoDB.Tests.Fixtures;
 using Xunit;
 
@@ -12,13 +13,15 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         this.fixture = fixture;
     }
+    private async Task<DataAccessContext<TestEntity>> CreateContextAsync()
+     => new DataAccessContext<TestEntity>(fixture.Database);
 
     [Fact]
     public async Task InsertAsync_ShouldInsertEntity()
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
         var entity = CreateEntity("1");
 
         await context.InsertAsync(entity);
@@ -36,7 +39,7 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
         var entity = CreateEntity("2");
 
         await context.InsertAsync(entity);
@@ -57,7 +60,7 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
         var entity = CreateEntity("3");
 
         await context.InsertAsync(entity);
@@ -74,7 +77,7 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         await context.InsertAsync(CreateEntity("4"));
 
@@ -84,11 +87,11 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
                 Filters =
                 [
                     new QueryFilter
-                    {
-                        Field = nameof(TestEntity.Email),
-                        Operator = QueryOperator.Equal,
-                        Value = "test4@test.com"
-                    }
+                    (
+                        nameof(TestEntity.Email),
+                        QueryOperator.Equal,
+                        "test4@test.com"
+                    )
                 ]
             });
 
@@ -101,7 +104,7 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         await context.InsertAsync(CreateEntity("5", "A"));
         await context.InsertAsync(CreateEntity("6", "A"));
@@ -113,11 +116,11 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
                 Filters =
                 [
                     new QueryFilter
-                    {
-                        Field = nameof(TestEntity.Category),
-                        Operator = QueryOperator.Equal,
-                        Value = "A"
-                    }
+                    (
+                        nameof(TestEntity.Category),
+                        QueryOperator.Equal,
+                        "A"
+                    )
                 ],
                 PageSize = 10
             });
@@ -131,7 +134,7 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         await context.InsertAsync(CreateEntity("8"));
         await context.InsertAsync(CreateEntity("9"));
@@ -143,11 +146,11 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
                 Filters =
                 [
                     new QueryFilter
-                    {
-                        Field = nameof(TestEntity.Id),
-                        Operator = QueryOperator.In,
-                        Value = new[] { "8", "10" }
-                    }
+                    (
+                        nameof(TestEntity.Id),
+                        QueryOperator.In,
+                        new[] { "8", "10" }
+                    )
                 ],
                 PageSize = 10
             });
@@ -162,7 +165,7 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         for (var i = 1; i <= 5; i++)
             await context.InsertAsync(CreateEntity($"page-{i}"));
@@ -173,10 +176,10 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
                 Page = 2,
                 PageSize = 2,
                 Order = new QueryOrder
-                {
-                    Field = nameof(TestEntity.Id),
-                    Descending = false
-                }
+                (
+                    nameof(TestEntity.Id),
+                    false
+                )
             });
 
         Assert.Equal(2, result.Items.Count);
@@ -190,7 +193,7 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         await context.InsertAsync(CreateEntity("count-1"));
         await context.InsertAsync(CreateEntity("count-2"));
@@ -205,7 +208,7 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         await context.InsertAsync(CreateEntity("exists-1"));
 
@@ -220,7 +223,7 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         var result = await context.ExistsAsync(
             QueryById("does-not-exist"));
@@ -233,7 +236,7 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         var entity = CreateEntity("nullable-1");
         entity.UpdatedAt = null;
@@ -252,7 +255,7 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
     {
         await fixture.ClearAsync();
 
-        var context = fixture.CreateContext();
+        var context = await CreateContextAsync();
 
         var entity = CreateEntity("enum-1");
         entity.Status = TestStatus.Active;
@@ -289,11 +292,11 @@ public sealed class DataAccessContextTests : IClassFixture<MongoDbFixture>
             Filters =
             [
                 new QueryFilter
-                {
-                    Field = nameof(TestEntity.Id),
-                    Operator = QueryOperator.Equal,
-                    Value = id
-                }
+                (
+                    nameof(TestEntity.Id),
+                    QueryOperator.Equal,
+                    id
+                )
             ]
         };
     }

@@ -1,35 +1,28 @@
-using DataAccess.Abstractions.Interfaces;
 using MongoDB.Driver;
+using Testcontainers.MongoDb;
 using Xunit;
 
 namespace DataAccess.MongoDB.Tests.Fixtures;
 
 public sealed class MongoDbFixture : IAsyncLifetime
 {
-    private readonly MongoDbContainer container =
-        new MongoDbBuilder()
-            .WithImage("mongo:8")
-            .Build();
-
+   private readonly MongoDbContainer _mongoContainer = new MongoDbBuilder()
+        .WithImage("mongo:8")
+        .Build();
     public IMongoDatabase Database { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
-        await container.StartAsync();
+        await _mongoContainer.StartAsync();
 
-        var client = new MongoClient(container.GetConnectionString());
+        var client = new MongoClient(_mongoContainer.GetConnectionString());
 
         Database = client.GetDatabase("dataaccess_test");
     }
 
     public async Task DisposeAsync()
     {
-        await container.DisposeAsync();
-    }
-
-    public DataAccessContext<TestEntity> CreateContext()
-    {
-        return new DataAccessContext<TestEntity>(Database);
+        await _mongoContainer.DisposeAsync();
     }
 
     public async Task ClearAsync()

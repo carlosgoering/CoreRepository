@@ -1,7 +1,6 @@
 ﻿using DataAccess.Abstractions.Interfaces;
 using DataAccess.Abstractions.Models;
 using DataAccess.Core.Repository;
-using DataAccess.MongoDB.ClassMaps;
 using DataAccess.MongoDB.Context;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
