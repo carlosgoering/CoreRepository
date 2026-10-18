@@ -16,4 +16,8 @@
     <ProjectReference Include="..\..\DataAccess.Abstractions\DataAccess.Abstractions.csproj" />
     <ProjectReference Include="..\..\DataAccess.Core\DataAccess.Core.csproj" />
   </ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="DataAccess.MySQL.Tests" />
+	</ItemGroup>
 </Project>

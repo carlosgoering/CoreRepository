@@ -16,4 +16,7 @@
     <ProjectReference Include="..\..\DataAccess.Core\DataAccess.Core.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="DataAccess.Firestore.Tests" />
+	</ItemGroup>
 </Project>

@@ -2,7 +2,6 @@ using DataAccess.Abstractions.Interfaces;
 using DataAccess.Abstractions.Models;
 using DataAccess.Core.Repository;
 using DataAccess.SqlServer.Context;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 

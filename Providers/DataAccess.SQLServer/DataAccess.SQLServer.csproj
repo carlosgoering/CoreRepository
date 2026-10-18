@@ -12,9 +12,12 @@
 		<PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.0" />
 	</ItemGroup>
 
-	<ItemGroup>
+	<ItemGroup> 
 		<ProjectReference Include="..\..\DataAccess.Abstractions\DataAccess.Abstractions.csproj" />
 		<ProjectReference Include="..\..\DataAccess.Core\DataAccess.Core.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="DataAccess.SQLServer.Tests" />
+	</ItemGroup>
 </Project>
