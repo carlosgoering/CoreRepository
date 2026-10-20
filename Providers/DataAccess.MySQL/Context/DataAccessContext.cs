@@ -160,7 +160,7 @@ internal sealed class DataAccessContext<TEntity>
         await using var connection =
             await CreateConnectionAsync();
 
-        var commandData = BuildSelectQuery(query);
+        var commandData = BuildSelectQuery(query, firstOnly: true);
 
         await using var command =
             new MySqlCommand(commandData.Sql, connection);
@@ -277,7 +277,8 @@ internal sealed class DataAccessContext<TEntity>
         List<MySqlParameter> Parameters)
         BuildSelectQuery(
             Query<TEntity> query,
-            bool includePaging = false)
+            bool includePaging = false,
+            bool firstOnly = false)
     {
         var parameters = new List<MySqlParameter>();
 
@@ -304,7 +305,7 @@ internal sealed class DataAccessContext<TEntity>
                 $" LIMIT {query.PageSize} " +
                 $"OFFSET {query.Skip}";
         }
-        else
+        else if (firstOnly)
         {
             sql += " LIMIT 1";
         }
