@@ -1,6 +1,6 @@
 <Project>
-  <PropertyGroup>
-    <VersionPrefix>1.0.7</VersionPrefix>
-	<IsPackable>true</IsPackable>
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <VersionPrefix>1.0.2</VersionPrefix>
+	  <IsPackable>false</IsPackable>
   </PropertyGroup>
 </Project>
