@@ -26,7 +26,7 @@ class PackTests(unittest.TestCase):
             (directory / "results.trx").write_text("invalid xml")
             self.assertFalse(pack.passed_results(directory))
 
-    def exercise_pipeline(self, core=True, fail_pack=False, mysql=False):
+    def exercise_pipeline(self, core=True, fail_pack=False, mysql=False, cache=True):
         with tempfile.TemporaryDirectory() as folder:
             output = Path(folder)
             calls = []
@@ -37,7 +37,7 @@ class PackTests(unittest.TestCase):
                 staging = Path(command[command.index("-o") + 1])
                 (staging / (Path(command[2]).stem + ".1.0.0.nupkg")).write_text("package")
                 return 0
-            with patch.object(pack, "test_suite", side_effect=lambda name, *_: core and (name != "MySQL" or mysql)), \
+            with patch.object(pack, "test_suite", side_effect=lambda name, *_: core and (name != "MySQL" or mysql) and (name != "Cache" or cache)), \
                  patch.object(pack, "run", side_effect=fake_run):
                 with contextlib.redirect_stdout(io.StringIO()):
                     status = pack.build_packages("Release", output)
@@ -47,14 +47,21 @@ class PackTests(unittest.TestCase):
     def test_all_approved_packages_return_success(self):
         status, report, calls = self.exercise_pipeline(mysql=True)
         self.assertEqual(status, 0)
-        self.assertEqual(len(calls), 8)
+        self.assertEqual(len(calls), 12)
         self.assertTrue(all(x["status"] == "generated" for x in report))
 
     def test_failed_suite_stays_pending_while_other_packages_are_generated(self):
         status, report, calls = self.exercise_pipeline()
         self.assertEqual(status, 1)
-        self.assertEqual(len(calls), 7)
+        self.assertEqual(len(calls), 11)
         self.assertEqual([x["package"] for x in report if x["status"] == "pending"], ["DataAccess.MySQL"])
+
+    def test_failed_cache_blocks_only_cache_packages(self):
+        status, report, calls = self.exercise_pipeline(mysql=True, cache=False)
+        self.assertEqual(status, 1)
+        self.assertEqual(len(calls), 8)
+        self.assertEqual([x["package"] for x in report if x["status"] == "pending"],
+                         [f"DataAccess.{name}" for name in pack.CACHES])
 
     def test_failed_core_blocks_all_dependent_packages(self):
         status, report, calls = self.exercise_pipeline(core=False)
@@ -65,7 +72,7 @@ class PackTests(unittest.TestCase):
     def test_pack_failures_are_reported_as_pending(self):
         status, report, calls = self.exercise_pipeline(fail_pack=True)
         self.assertEqual(status, 1)
-        self.assertEqual(len(calls), 7)
+        self.assertEqual(len(calls), 11)
         self.assertTrue(all(x["status"] == "pending" for x in report))
 
 

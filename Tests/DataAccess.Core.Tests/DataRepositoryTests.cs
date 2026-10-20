@@ -2,6 +2,8 @@ using DataAccess.Abstractions.Interfaces;
 using DataAccess.Abstractions.Models;
 using DataAccess.Core.Repository;
 using Xunit;
+using DataAccess.Cache.MemoryCache.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DataAccess.Core.Tests;
 
@@ -61,9 +63,39 @@ public sealed class DataRepositoryTests
         Assert.Same(error, await Assert.ThrowsAsync<InvalidOperationException>(() => repository.DeleteAsync(new())));
     }
 
+    [Fact]
+    public async Task Cached_Reads_Are_Reused_And_Each_Write_Invalidates_Them()
+    {
+        using var services = new ServiceCollection().AddDataAccessMemoryCache().BuildServiceProvider();
+        var context = new RecordingContext();
+        var repository = new DataRepository<Entity>(context, services.GetRequiredService<DataAccess.Cache.Abstractions.ICacheProvider>());
+        var query = new Query<Entity>();
+        foreach (var write in new Func<Task>[]
+        {
+            async () => { await repository.InsertAsync(new()); },
+            async () => { await repository.UpdateAsync(new()); },
+            () => repository.DeleteAsync(new())
+        })
+        {
+            var first = await repository.FirstOrDefaultAsync(query);
+            context.Result = new();
+            Assert.Same(first, await repository.FirstOrDefaultAsync(query));
+            await write();
+            Assert.Same(context.Result, await repository.FirstOrDefaultAsync(query));
+        }
+        Assert.Equal(12, await repository.CountAsync(query));
+        context.Count = 0;
+        Assert.Equal(12, await repository.CountAsync(query));
+        await repository.DeleteAsync(new());
+        Assert.Equal(0, await repository.CountAsync(query));
+        context.Count = 5;
+        Assert.Equal(0, await repository.CountAsync(query));
+    }
+
     public sealed class Entity { }
     private sealed class RecordingContext : IDataAccessContext<Entity>
     {
+        public long Count { get; set; } = 12;
         public Entity? Entity { get; private set; }
         public Query<Entity>? Query { get; private set; }
         public string? Operation { get; private set; }
@@ -83,7 +115,7 @@ public sealed class DataRepositoryTests
         public Task<Entity?> FirstOrDefaultAsync(Query<Entity> query) { Query = query; return Task.FromResult(Result); }
         public Task<IReadOnlyCollection<Entity>> SelectAsync(Query<Entity> query) { Query = query; return Task.FromResult(Items); }
         public Task<PagedResult<Entity>> SelectPagedAsync(Query<Entity> query) { Query = query; return Task.FromResult(Page); }
-        public Task<long> CountAsync(Query<Entity>? query = null) { Query = query; return Task.FromResult(12L); }
+        public Task<long> CountAsync(Query<Entity>? query = null) { Query = query; return Task.FromResult(Count); }
         public Task<bool> ExistsAsync(Query<Entity> query) { Query = query; return Task.FromResult(true); }
     }
 }

@@ -10,6 +10,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
+CACHES = ("Cache.Abstractions", "Cache.MemoryCache", "Cache.Redis", "Cache.Garnet")
 PROVIDERS = ("Firestore", "MongoDB", "MySQL", "PostgreSQL", "SQLite", "SQLServer")
 
 
@@ -52,19 +53,19 @@ def test_suite(name, configuration, output):
 
 
 def build_packages(configuration, output):
-    suites = {name: test_suite(name, configuration, output) for name in ("Core", *PROVIDERS)}
+    suites = {name: test_suite(name, configuration, output) for name in ("Core", "Cache", *PROVIDERS)}
     packages = output / "packages"
     packages.mkdir()
     logs = output / "logs"
     logs.mkdir()
     report = []
-    for name in ("Abstractions", "Core", *PROVIDERS):
+    for name in ("Abstractions", "Core", *PROVIDERS, *CACHES):
         package = f"DataAccess.{name}"
-        gates = ["Core"] if name in ("Abstractions", "Core") else ["Core", name]
+        gates = ["Core", "Cache"] if name in CACHES else (["Core"] if name in ("Abstractions", "Core") else ["Core", name])
         failed = [gate for gate in gates if not suites[gate]]
         reason = "Tests not approved: " + ", ".join(failed) if failed else ""
         if not failed:
-            project = (ROOT if name in ("Abstractions", "Core") else ROOT / "Providers") / package / f"{package}.csproj"
+            project = ((ROOT / "Cache" if name == "Cache.Abstractions" else ROOT / "Cache" / "Providers") if name in CACHES else (ROOT if name in ("Abstractions", "Core") else ROOT / "Providers")) / package / f"{package}.csproj"
             print(f"Packing {package}...", flush=True)
             # Stage each package so a failed pack cannot leave a publishable artifact.
             with tempfile.TemporaryDirectory(prefix="pack-", dir=output) as staging:

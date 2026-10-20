@@ -12,4 +12,5 @@
     
     <ProjectReference Include="../../DataAccess.Core/DataAccess.Core.csproj" />
   </ItemGroup>
+  <ItemGroup><ProjectReference Include="../../Cache/Providers/DataAccess.Cache.MemoryCache/DataAccess.Cache.MemoryCache.csproj" /></ItemGroup>
 </Project>

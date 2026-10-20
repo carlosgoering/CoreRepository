@@ -4,6 +4,14 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/Cache/">
+    <Project Path="Cache/DataAccess.Cache.Abstractions/DataAccess.Cache.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/Cache/Providers/">
+    <Project Path="Cache/Providers/DataAccess.Cache.MemoryCache/DataAccess.Cache.MemoryCache.csproj" />
+    <Project Path="Cache/Providers/DataAccess.Cache.Redis/DataAccess.Cache.Redis.csproj" />
+    <Project Path="Cache/Providers/DataAccess.Cache.Garnet/DataAccess.Cache.Garnet.csproj" />
+  </Folder>
   <Folder Name="/Providers/">
     <Project Path="Providers/DataAccess.Firestore/DataAccess.Firestore.csproj" />
     <Project Path="Providers/DataAccess.MongoDB/DataAccess.MongoDB.csproj" />
@@ -17,6 +25,7 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Tests/">
+    <Project Path="Tests/DataAccess.Cache.Tests/DataAccess.Cache.Tests.csproj" />
     <Project Path="Tests/DataAccess.Core.Tests/DataAccess.Core.Tests.csproj" />
     <Project Path="Tests/DataAccess.MongoDB.Tests/DataAccess.MongoDB.Tests.csproj" />
     <Project Path="Tests/DataAccess.PostgreSQL.Tests/DataAccess.PostgreSQL.Tests.csproj" />

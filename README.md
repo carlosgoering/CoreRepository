@@ -788,3 +788,166 @@ The package version can be updated by changing the `VersionPrefix` property in `
 ```xml
 <VersionPrefix>x.x.x</VersionPrefix>
 ```
+
+## Cache providers
+
+Caching is optional and independent of the database provider. Register your database
+as usual, then register **one** cache provider if you want caching. The repository
+receives `ICacheProvider` automatically through dependency injection.
+
+### Without cache (default)
+
+Register only the database provider. For example, using MySQL:
+
+```csharp
+using DataAccess.MySQL.Configuration;
+
+builder.Services.AddMySQL(options =>
+{
+    options.ConnectionString = builder.Configuration.GetConnectionString("MySQL")
+        ?? throw new InvalidOperationException("MySQL connection string is missing.");
+});
+```
+
+If your application already uses the `AddDbProvider(builder.Configuration)` helper
+shown above, keep that registration instead. No cache registration is required.
+There is no default cache provider enabled automatically and no flag is needed to
+disable it. Without `ICacheProvider`, repository operations go directly to the database.
+To disable caching in an application that uses it, remove its `AddDataAccess...Cache`
+registration. Database and repository registrations stay the same.
+
+### In-process memory cache
+
+Reference `DataAccess.Cache.MemoryCache` and add:
+
+```csharp
+using DataAccess.Cache.MemoryCache.Configuration;
+
+builder.Services.AddDataAccessMemoryCache();
+```
+
+This registers `IMemoryCache` and a singleton `ICacheProvider`. Entries are local to
+the application process and are not shared between application instances. Docker
+is not required.
+
+### Redis
+
+Reference `DataAccess.Cache.Redis` and add:
+
+```csharp
+using DataAccess.Cache.Redis.Configuration;
+
+builder.Services.AddDataAccessRedisCache(
+    builder.Configuration.GetConnectionString("Cache")
+        ?? throw new InvalidOperationException("Cache connection string is missing."));
+```
+
+Configure the endpoint in `appsettings.json`:
+
+```json
+{
+  "ConnectionStrings": {
+    "Cache": "localhost:6379"
+  }
+}
+```
+
+### Garnet
+
+Reference `DataAccess.Cache.Garnet` and use this registration instead of Redis:
+
+```csharp
+using DataAccess.Cache.Garnet.Configuration;
+
+builder.Services.AddDataAccessGarnetCache(
+    builder.Configuration.GetConnectionString("Cache")
+        ?? throw new InvalidOperationException("Cache connection string is missing."));
+```
+
+Use the same `ConnectionStrings:Cache` setting, pointing to your Garnet server.
+Garnet uses database 0. Redis and Garnet register a singleton connection and
+`ICacheProvider`; the DI container creates the connection when first needed and
+owns its disposal. Register only one cache provider per service collection.
+
+### Repository behavior
+
+Application services continue to inject `IRepository<TEntity>` as usual. No manual
+cache calls are required for repository caching:
+
+* `FirstOrDefaultAsync`, `SelectAsync`, `SelectPagedAsync`, `CountAsync` and
+  `ExistsAsync` reuse cached results for the entity type, operation and query.
+* A missing entity returned by `FirstOrDefaultAsync` is not cached. Empty
+  collections, zero counts and `false` existence results are cached.
+* Successful `InsertAsync`, `UpdateAsync` and `DeleteAsync` calls invalidate the
+  entity type's cache prefix. Writes performed outside the repository do not
+  invalidate its cache automatically.
+* Repository entries currently have no TTL. They remain until invalidated,
+  removed or evicted by the backend. The TTL argument below applies to manual
+  `ICacheProvider.SetAsync` calls.
+
+Redis and Garnet serialize values as JSON. Distributed prefix removal scans
+primary servers and is not atomic with concurrent reads/writes. Repository caching
+does not provide transactional consistency. Use a dedicated cache database to
+avoid scanning unrelated application keys. Cache errors propagate to the caller;
+there is no automatic fallback to the database on a cache failure.
+
+### Using the cache directly
+
+For application-specific entries, inject `ICacheProvider`:
+
+```csharp
+using DataAccess.Cache.Abstractions;
+
+public sealed class StatusCache(ICacheProvider cache)
+{
+    public Task SaveAsync(string status) =>
+        cache.SetAsync("status:current", status, TimeSpan.FromMinutes(5));
+
+    public Task<string?> ReadAsync() =>
+        cache.GetAsync<string>("status:current");
+
+    public Task RemoveAsync() =>
+        cache.RemoveAsync("status:current");
+
+    public Task ClearAsync() =>
+        cache.RemoveByPrefixAsync("status:");
+}
+```
+
+Expiration must be positive when supplied. Omitted expiration keeps entries until
+removed or evicted. For value types, read nullable types (`GetAsync<long?>`) to
+distinguish missing entries from zero. Prefixes are literal, including wildcard
+characters; use a nonempty prefix.
+
+### Docker and tests
+
+Start one local cache backend:
+
+```bash
+docker run --rm -p 6379:6379 redis:7.4
+# Alternatively, using the same port:
+docker run --rm -p 6379:6379 ghcr.io/microsoft/garnet:1.0.99
+```
+
+`DataAccess.Cache.Tests` starts isolated Redis and Garnet containers automatically;
+you only need a running Docker daemon. It tests all three providers for round
+trips, missing entries, zero/false, replacement, TTL, removal and literal prefix
+isolation. Core tests also cover repository cache reuse and invalidation after writes.
+
+```bash
+dotnet test Tests/DataAccess.Cache.Tests
+```
+
+The validated pack script also packages the four cache projects, requiring both
+Core and Cache suites to pass.
+
+### Project layout
+
+```text
+Cache/
+├── DataAccess.Cache.Abstractions/
+└── Providers/
+    ├── DataAccess.Cache.MemoryCache/
+    ├── DataAccess.Cache.Redis/
+    └── DataAccess.Cache.Garnet/
+```

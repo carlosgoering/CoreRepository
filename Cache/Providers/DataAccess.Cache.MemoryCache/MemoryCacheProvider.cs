@@ -1,4 +1,4 @@
-﻿using DataAccess.Cache.Abstractions;
+using DataAccess.Cache.Abstractions;
 using Microsoft.Extensions.Caching.Memory;
 using System.Collections.Concurrent;
 
@@ -7,7 +7,7 @@ namespace DataAccess.Cache.MemoryCache;
 public sealed class MemoryCacheProvider : ICacheProvider
 {
     private readonly IMemoryCache cache;
-    private readonly ConcurrentDictionary<string, byte> keys = new();
+    private readonly ConcurrentDictionary<string, object> keys = new();
 
     public MemoryCacheProvider(IMemoryCache cache)
     {
@@ -31,14 +31,15 @@ public sealed class MemoryCacheProvider : ICacheProvider
         if (expiration.HasValue)
             options.AbsoluteExpirationRelativeToNow = expiration;
 
+        var token = new object();
         options.RegisterPostEvictionCallback(
             (_, _, _, _) =>
             {
-                keys.TryRemove(key, out _);
+                ((ICollection<KeyValuePair<string, object>>)keys).Remove(new(key, token));
             });
 
+        keys[key] = token;
         cache.Set(key, value, options);
-        keys[key] = 0;
 
         return Task.CompletedTask;
     }

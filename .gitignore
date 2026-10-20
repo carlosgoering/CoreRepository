@@ -368,3 +368,4 @@ FodyWeavers.xsd
 .idea/.idea.DataAccess/.idea/workspace.xml
 .idea/.idea.DataAccess/.idea/indexLayout.xml
 .DS_Store
+artifacts/

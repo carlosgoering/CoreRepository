@@ -1,7 +1,6 @@
-﻿using DataAccess.Abstractions.Interfaces;
+using DataAccess.Abstractions.Interfaces;
 using DataAccess.Abstractions.Models;
 using DataAccess.Cache.Abstractions;
-using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
 namespace DataAccess.Core.Repository;
@@ -14,10 +13,10 @@ public class DataRepository<TEntity> : IRepository<TEntity>
 
     public DataRepository(
         IDataAccessContext<TEntity> dataContext,
-        IServiceProvider serviceProvider)
+        ICacheProvider? cache = null)
     {
         this.dataContext = dataContext;
-        cache = serviceProvider.GetService<ICacheProvider>();
+        this.cache = cache;
     }
 
     public async Task<TEntity> InsertAsync(TEntity entity)
